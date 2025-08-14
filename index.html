@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Análise de Pontos de Função</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .view { display: none; }
+        .view.active {
+            display: block;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .chart-container { position: relative; height: 45vh; width: 100%; }
+        .bar-chart-container { position: relative; min-height: 60vh; width: 100%; }
+        .nav-link { transition: all 0.3s ease; }
+        .nav-link.active { background-color: #4f46e5; color: white; }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        #mainChart, .bar-chart { cursor: pointer; }
+        
+        #details-modal { transition: opacity 0.3s ease; }
+        #details-modal-panel { transition: all 0.3s ease; }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-white shadow-md sticky top-0 z-20">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-20">
+                    <div class="flex items-center space-x-4">
+                        <a href="#dashboard" id="home-button" class="p-2 rounded-full hover:bg-gray-200 transition-colors" title="Voltar ao Dashboard">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                        </a>
+                        <div class="text-left">
+                            <h1 class="text-base sm:text-lg md:text-xl font-bold text-gray-900">
+                                Sistema de Controle de Escalas, Permutas e Serviços Extras
+                            </h1>
+                            <p class="text-xs sm:text-sm text-gray-500">Análise de Ponto de Função (IFPUG)</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Desktop Navigation -->
+                    <nav id="main-nav" class="hidden md:flex space-x-2">
+                        <a href="#dashboard" data-view="dashboard" class="nav-link active px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                        <a href="#backend" data-view="backend" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Backend</a>
+                        <a href="#frontend-desktop" data-view="frontend-desktop" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Desktop</a>
+                        <a href="#frontend-mobile" data-view="frontend-mobile" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Mobile</a>
+                    </nav>
+
+                    <!-- Mobile Menu Button -->
+                    <div class="md:hidden">
+                        <button id="mobile-menu-button" class="p-2 rounded-md text-gray-600 hover:bg-gray-200">
+                            <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- Mobile Menu -->
+            <div id="mobile-menu" class="md:hidden hidden">
+                <a href="#dashboard" data-view="dashboard" class="block nav-link text-center py-2 px-4 text-sm hover:bg-gray-200">Dashboard</a>
+                <a href="#backend" data-view="backend" class="block nav-link text-center py-2 px-4 text-sm hover:bg-gray-200">Backend</a>
+                <a href="#frontend-desktop" data-view="frontend-desktop" class="block nav-link text-center py-2 px-4 text-sm hover:bg-gray-200">Desktop</a>
+                <a href="#frontend-mobile" data-view="frontend-mobile" class="block nav-link text-center py-2 px-4 text-sm hover:bg-gray-200">Mobile</a>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-grow container mx-auto p-4 sm:p-6 lg:p-8">
+            <!-- Dashboard View -->
+            <div id="dashboard-view" class="view active">
+                <div class="text-center mb-10">
+                    <div class="bg-indigo-600 text-white py-6 px-4 sm:p-8 rounded-xl shadow-2xl inline-block">
+                        <h3 class="opacity-80 text-lg sm:text-xl font-medium">Total Geral do Projeto</h3>
+                        <p id="total-afp-geral" class="text-5xl sm:text-7xl font-bold my-2">0</p>
+                        <p class="text-lg sm:text-2xl font-light">Pontos de Função Ajustados (AFP)</p>
+                    </div>
+                </div>
+                <div class="card p-6 mb-8">
+                    <h3 class="text-xl font-semibold mb-4 text-center">Distribuição de Pontos de Função Não-Ajustados (UFP)</h3>
+                    <div class="chart-container"><canvas id="mainChart"></canvas></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="card p-6 border-l-4 border-blue-500"><h3 class="text-gray-500 text-lg">Backend</h3><p id="total-afp-backend" class="text-4xl font-bold mt-2">0 <span class="text-lg font-normal">AFP</span></p></div>
+                    <div class="card p-6 border-l-4 border-green-500"><h3 class="text-gray-500 text-lg">Frontend Desktop</h3><p id="total-afp-desktop" class="text-4xl font-bold mt-2">0 <span class="text-lg font-normal">AFP</span></p></div>
+                    <div class="card p-6 border-l-4 border-yellow-500"><h3 class="text-gray-500 text-lg">Frontend Mobile</h3><p id="total-afp-mobile" class="text-4xl font-bold mt-2">0 <span class="text-lg font-normal">AFP</span></p></div>
+                </div>
+            </div>
+
+            <!-- Backend View -->
+            <div id="backend-view" class="view">
+                <h2 class="text-3xl font-bold mb-6">Análise do Backend</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 card p-6">
+                        <h3 class="text-xl font-semibold mb-4">UFP por Módulo/Controller</h3>
+                        <div class="bar-chart-container"><canvas id="backendChart" class="bar-chart"></canvas></div>
+                    </div>
+                    <div class="card p-6">
+                        <h3 class="text-xl font-semibold mb-4">Resumo do Módulo</h3>
+                        <div class="space-y-4">
+                            <div><p class="text-gray-500">PF de Dados (ALI)</p><p id="backend-data-pf" class="text-2xl font-bold">0</p></div>
+                            <div><p class="text-gray-500">PF Transacionais</p><p id="backend-trans-pf" class="text-2xl font-bold">0</p></div>
+                            <hr class="my-2"><div class="text-blue-600"><p>Total Não-Ajustado (UFP)</p><p id="backend-total-ufp" class="text-3xl font-bold">0</p></div><hr class="my-2">
+                            <div><p class="text-gray-500">Fator de Ajuste (VAF)</p><p id="backend-vaf" class="text-2xl font-bold">0</p></div>
+                            <div class="bg-blue-100 p-4 rounded-lg"><p class="text-blue-800 font-semibold">Total Ajustado (AFP)</p><p id="backend-total-afp" class="text-3xl font-bold text-blue-800">0</p></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card p-6 mt-8">
+                    <h3 class="text-xl font-semibold mb-4">Tabela de Fator de Ajuste (VAF) - Backend</h3>
+                    <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Característica</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nota</th></tr></thead><tbody id="backend-vaf-table" class="bg-white divide-y divide-gray-200"></tbody></table></div>
+                </div>
+            </div>
+
+            <!-- Frontend Desktop View -->
+            <div id="frontend-desktop-view" class="view">
+                <h2 class="text-3xl font-bold mb-6">Análise do Frontend Desktop</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 card p-6">
+                        <h3 class="text-xl font-semibold mb-4">UFP por Módulo</h3>
+                        <div class="bar-chart-container"><canvas id="desktopChart" class="bar-chart"></canvas></div>
+                    </div>
+                    <div class="card p-6">
+                        <h3 class="text-xl font-semibold mb-4">Resumo do Módulo</h3>
+                        <div class="space-y-4">
+                            <div><p class="text-gray-500">PF de Dados (AIE)</p><p id="desktop-data-pf" class="text-2xl font-bold">0</p></div>
+                            <div><p class="text-gray-500">PF Transacionais</p><p id="desktop-trans-pf" class="text-2xl font-bold">0</p></div>
+                            <hr class="my-2"><div class="text-green-600"><p>Total Não-Ajustado (UFP)</p><p id="desktop-total-ufp" class="text-3xl font-bold">0</p></div><hr class="my-2">
+                            <div><p class="text-gray-500">Fator de Ajuste (VAF)</p><p id="desktop-vaf" class="text-2xl font-bold">0</p></div>
+                            <div class="bg-green-100 p-4 rounded-lg"><p class="text-green-800 font-semibold">Total Ajustado (AFP)</p><p id="desktop-total-afp" class="text-3xl font-bold text-green-800">0</p></div>
+                        </div>
+                    </div>
+                </div>
+                 <div class="card p-6 mt-8">
+                    <h3 class="text-xl font-semibold mb-4">Tabela de Fator de Ajuste (VAF) - Frontend Desktop</h3>
+                    <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Característica</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nota</th></tr></thead><tbody id="desktop-vaf-table" class="bg-white divide-y divide-gray-200"></tbody></table></div>
+                </div>
+            </div>
+
+            <!-- Frontend Mobile View -->
+            <div id="frontend-mobile-view" class="view">
+                <h2 class="text-3xl font-bold mb-6">Análise do Frontend Mobile</h2>
+                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 card p-6">
+                        <h3 class="text-xl font-semibold mb-4">UFP por Módulo</h3>
+                        <div class="bar-chart-container"><canvas id="mobileChart" class="bar-chart"></canvas></div>
+                    </div>
+                    <div class="card p-6">
+                        <h3 class="text-xl font-semibold mb-4">Resumo do Módulo</h3>
+                        <div class="space-y-4">
+                            <div><p class="text-gray-500">PF de Dados (AIE)</p><p id="mobile-data-pf" class="text-2xl font-bold">0</p></div>
+                            <div><p class="text-gray-500">PF Transacionais</p><p id="mobile-trans-pf" class="text-2xl font-bold">0</p></div>
+                            <hr class="my-2"><div class="text-yellow-600"><p>Total Não-Ajustado (UFP)</p><p id="mobile-total-ufp" class="text-3xl font-bold">0</p></div><hr class="my-2">
+                            <div><p class="text-gray-500">Fator de Ajuste (VAF)</p><p id="mobile-vaf" class="text-2xl font-bold">0</p></div>
+                            <div class="bg-yellow-100 p-4 rounded-lg"><p class="text-yellow-800 font-semibold">Total Ajustado (AFP)</p><p id="mobile-total-afp" class="text-3xl font-bold text-yellow-800">0</p></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card p-6 mt-8">
+                    <h3 class="text-xl font-semibold mb-4">Tabela de Fator de Ajuste (VAF) - Frontend Mobile</h3>
+                    <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Característica</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nota</th></tr></thead><tbody id="mobile-vaf-table" class="bg-white divide-y divide-gray-200"></tbody></table></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal para Detalhes do Módulo -->
+    <div id="details-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-30 flex items-center justify-center p-4 hidden opacity-0" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div id="details-modal-panel" class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col transform scale-95 opacity-0">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h2 id="modal-title" class="text-xl font-bold text-gray-800">Detalhes do Módulo</h2>
+                <button id="modal-close-button" class="p-2 rounded-full hover:bg-gray-200 transition-colors">
+                    <svg class="h-6 w-6 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50 sticky top-0">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Função / Arquivo</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Complexidade</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PF</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modal-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+            <div class="p-3 border-t bg-gray-50 rounded-b-xl">
+                <p class="text-xs text-gray-600 text-center space-x-4">
+                    <span><strong>ALI:</strong> Arquivo Lógico Interno</span>
+                    <span><strong>AIE:</strong> Arquivo de Interface Externa</span>
+                    <span><strong>EE:</strong> Entrada Externa</span>
+                    <span><strong>SE:</strong> Saída Externa</span>
+                    <span><strong>CE:</strong> Consulta Externa</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // --- DADOS DA ANÁLISE ---
+            const gscData = {
+                backend: [
+                    { name: 'Comunicação de Dados', score: 5 }, { name: 'Processamento Distribuído', score: 2 },
+                    { name: 'Performance', score: 2 }, { name: 'Configuração do Equipamento', score: 1 },
+                    { name: 'Taxa de Transações', score: 1 }, { name: 'Entrada de Dados Online', score: 3 },
+                    { name: 'Eficiência do Usuário Final', score: 5 }, { name: 'Atualização Online', score: 2 },
+                    { name: 'Processamento Complexo', score: 3 }, { name: 'Reusabilidade', score: 3 },
+                    { name: 'Facilidade de Implantação', score: 2 }, { name: 'Facilidade de Operação', score: 2 },
+                    { name: 'Múltiplos Locais', score: 1 }, { name: 'Facilidade de Mudança', score: 5 }
+                ],
+                desktop: [
+                    { name: 'Comunicação de Dados', score: 5 }, { name: 'Processamento Distribuído', score: 5 },
+                    { name: 'Performance', score: 2 }, { name: 'Configuração do Equipamento', score: 1 },
+                    { name: 'Taxa de Transações', score: 1 }, { name: 'Entrada de Dados Online', score: 5 },
+                    { name: 'Eficiência do Usuário Final', score: 5 }, { name: 'Atualização Online', score: 2 },
+                    { name: 'Processamento Complexo', score: 2 }, { name: 'Reusabilidade', score: 3 },
+                    { name: 'Facilidade de Implantação', score: 3 }, { name: 'Facilidade de Operação', score: 0 },
+                    { name: 'Múltiplos Locais', score: 0 }, { name: 'Facilidade de Mudança', score: 5 }
+                ],
+                mobile: [
+                    { name: 'Comunicação de Dados', score: 5 }, { name: 'Processamento Distribuído', score: 5 },
+                    { name: 'Performance', score: 2 }, { name: 'Configuração do Equipamento', score: 1 },
+                    { name: 'Taxa de Transações', score: 1 }, { name: 'Entrada de Dados Online', score: 2 },
+                    { name: 'Eficiência do Usuário Final', score: 5 }, { name: 'Atualização Online', score: 5 },
+                    { name: 'Processamento Complexo', score: 4 }, { name: 'Reusabilidade', score: 3 },
+                    { name: 'Facilidade de Implantação', score: 3 }, { name: 'Facilidade de Operação', score: 0 },
+                    { name: 'Múltiplos Locais', score: 4 }, { name: 'Facilidade de Mudança', score: 5 }
+                ]
+            };
+
+            const projectData = {
+                backend: {
+                    dataPf: 182, transPf: 449,
+                    modules: [
+                        { name: 'Permissoes', pf: 116, details: [ {func:'CargoPerfisController', type:'Total', complexity:'Média', pf:35}, {func:'FuncionalidadeController', type:'Total', complexity:'Baixa', pf:23}, {func:'PerfilController', type:'Total', complexity:'Baixa', pf:23}, {func:'PerfisFuncionalidadesController', type:'Total', complexity:'Média', pf:35} ]},
+                        { name: 'Infra/Server', pf: 103, details: [ {func:'Itens de Domínio', type:'Total', complexity:'Baixa', pf:25}, {func:'Infra/Dados', type:'Total', complexity:'Baixa', pf:35}, {func:'Server (Outros)', type:'Total', complexity:'Média', pf:43} ]},
+                        { name: 'Permutas', pf: 63, details: [ {func:'ALI: Permutas', type:'ALI', complexity:'Baixa', pf:7}, {func:'ALI: Funcionario', type:'ALI', complexity:'Baixa', pf:7}, {func:'ALI: PermutaMensagem', type:'ALI', complexity:'Baixa', pf:7}, {func:'IncluirPermuta', type:'EE', complexity:'Média', pf:4}, {func:'AtualizarPermuta', type:'EE', complexity:'Baixa', pf:3}, {func:'BuscarFuncionarios', type:'SE', complexity:'Baixa', pf:4}, {func:'DeletarFuncionario', type:'EE', complexity:'Baixa', pf:3}, {func:'BuscarPorIdEscalas', type:'CE', complexity:'Baixa', pf:3}, {func:'BuscarPermFuncPorId', type:'CE', complexity:'Baixa', pf:3}, {func:'AprovarSolicitado', type:'EE', complexity:'Média', pf:4}, {func:'RecusarSolicitado', type:'EE', complexity:'Média', pf:4}, {func:'AprovarPermuta', type:'EE', complexity:'Média', pf:4}, {func:'RecusarPermuta', type:'EE', complexity:'Média', pf:4}, {func:'BuscarSolicitacoesFuncPorId', type:'CE', complexity:'Baixa', pf:3}, {func:'ContarPermutasPendentes', type:'CE', complexity:'Baixa', pf:3} ]},
+                        { name: 'SolicitacoesExtra', pf: 45, details: [ {func:'ALI: SolicitacaoEscalaExtra', type:'ALI', complexity:'Baixa', pf:7}, {func:'ALI: EscalaExtra (Ref)', type:'ALI', complexity:'Baixa', pf:7}, {func:'BuscarExtras', type:'SE', complexity:'Baixa', pf:4}, {func:'IncluirSolicitacao', type:'EE', complexity:'Baixa', pf:3}, {func:'DeletarEscalaExtra', type:'EE', complexity:'Baixa', pf:3}, {func:'BuscarPorIdFuncionario', type:'CE', complexity:'Baixa', pf:3}, {func:'ListarExtras', type:'SE', complexity:'Baixa', pf:4}, {func:'BuscarPorIdDaEscalaExtra', type:'CE', complexity:'Baixa', pf:3}, {func:'BuscarStatusInscricao', type:'SE', complexity:'Baixa', pf:4}, {func:'AlterarStatusExtra', type:'EE', complexity:'Baixa', pf:3}, {func:'AlterarStatusMobile', type:'EE', complexity:'Média', pf:4} ]},
+                        { name: 'Escala', pf: 37, details: [ {func:'ALI: Escala', type:'ALI', complexity:'Baixa', pf:7}, {func:'ALI: EscalaPronta', type:'ALI', complexity:'Baixa', pf:7}, {func:'IncluirEscala', type:'EE', complexity:'Baixa', pf:3}, {func:'AtualizarTipoEscala', type:'EE', complexity:'Baixa', pf:3}, {func:'BuscarPorIdEscalas', type:'CE', complexity:'Baixa', pf:3}, {func:'BuscarEscalas', type:'SE', complexity:'Baixa', pf:4}, {func:'DeletarEscala', type:'EE', complexity:'Baixa', pf:3}, {func:'MontarEscala', type:'EE', complexity:'Média', pf:4}, {func:'AlterarEscalaPronta', type:'EE', complexity:'Baixa', pf:3} ]},
+                        { name: 'EscalaExtra', pf: 34, details: [ {func:'ALI: EscalaExtra', type:'ALI', complexity:'Baixa', pf:7}, {func:'ALI: Funcionario (Ref)', type:'ALI', complexity:'Baixa', pf:7}, {func:'BuscarExtras', type:'SE', complexity:'Média', pf:5}, {func:'IncluirListaEscalaExtra', type:'EE', complexity:'Média', pf:4}, {func:'DeletarEscalaExtra', type:'EE', complexity:'Baixa', pf:3}, {func:'AtualizarEscalaExtra', type:'EE', complexity:'Média', pf:4}, {func:'BuscarTiposServicoExtra', type:'SE', complexity:'Baixa', pf:4} ]},
+                        { name: 'EscalaPronta', pf: 33, details: [ {func:'ALI: EscalaPronta', type:'ALI', complexity:'Baixa', pf:7}, {func:'ALI: Escala (Ref)', type:'ALI', complexity:'Baixa', pf:7}, {func:'RecriarEscalaProximoMes', type:'EE', complexity:'Média', pf:4}, {func:'IncluirFuncionarioEscala', type:'EE', complexity:'Baixa', pf:3}, {func:'AtualizarEscalaPronta', type:'EE', complexity:'Baixa', pf:3}, {func:'DeletarOcorrenciaFuncionario', type:'EE', complexity:'Baixa', pf:3}, {func:'BuscarEscalaProntaPorId', type:'CE', complexity:'Baixa', pf:3}, {func:'BuscarPorFuncionario', type:'CE', complexity:'Baixa', pf:3} ]},
+                        { name: 'Login', pf: 32, details: [ {func:'ALI: Login', type:'ALI', complexity:'Baixa', pf:7}, {func:'ALI: Funcionario (Ref)', type:'ALI', complexity:'Baixa', pf:7}, {func:'IncluirLogin', type:'EE', complexity:'Baixa', pf:3}, {func:'Autenticar', type:'CE', complexity:'Baixa', pf:3}, {func:'EsqueciSenha', type:'EE', complexity:'Baixa', pf:3}, {func:'RedefinirSenha', type:'EE', complexity:'Baixa', pf:3}, {func:'Refresh', type:'CE', complexity:'Baixa', pf:3}, {func:'UpdateFcmToken', type:'EE', complexity:'Baixa', pf:3} ]},
+                        { name: 'Usuario', pf: 24, details: [ {func:'ALI: Usuario', type:'ALI', complexity:'Baixa', pf:7}, {func:'CriarUsuario', type:'EE', complexity:'Baixa', pf:3}, {func:'BuscarPorId', type:'SE', complexity:'Baixa', pf:4}, {func:'BuscarTodos', type:'SE', complexity:'Baixa', pf:4}, {func:'AtualizarUsuario', type:'EE', complexity:'Baixa', pf:3}, {func:'DeletarUsuario', type:'EE', complexity:'Baixa', pf:3} ]},
+                        { name: 'Funcionario', pf: 24, details: [ {func:'ALI: Funcionario', type:'ALI', complexity:'Baixa', pf:7}, {func:'IncluirFuncionario', type:'EE', complexity:'Baixa', pf:3}, {func:'AtualizarFuncionario', type:'EE', complexity:'Baixa', pf:3}, {func:'BuscarFuncionarios', type:'SE', complexity:'Baixa', pf:4}, {func:'DeletarFuncionario', type:'EE', complexity:'Baixa', pf:3}, {func:'IncluirListaFuncionario', type:'EE', complexity:'Média', pf:4} ]},
+                        { name: 'PostoTrabalho', pf: 24, details: [ {func:'ALI: PostoTrabalho', type:'ALI', complexity:'Baixa', pf:7}, {func:'IncluirPostoTrabalho', type:'EE', complexity:'Baixa', pf:3}, {func:'AtualizarPostoTrabalho', type:'EE', complexity:'Baixa', pf:3}, {func:'BuscarPostos', type:'SE', complexity:'Baixa', pf:4}, {func:'DeletarPostoTrabalho', type:'EE', complexity:'Baixa', pf:3}, {func:'IncluirListaPostoTrabalho', type:'EE', complexity:'Média', pf:4} ]},
+                        { name: 'TipoEscala', pf: 24, details: [ {func:'ALI: TipoEscala', type:'ALI', complexity:'Baixa', pf:7}, {func:'IncluirTipoEscala', type:'EE', complexity:'Baixa', pf:3}, {func:'AtualizarTipoEscala', type:'EE', complexity:'Baixa', pf:3}, {func:'BuscarTipoEscala (Todos)', type:'SE', complexity:'Baixa', pf:4}, {func:'DeletarTipoEscala', type:'EE', complexity:'Baixa', pf:3}, {func:'BuscarTipoEscala (PorId)', type:'SE', complexity:'Baixa', pf:4} ]},
+                        { name: 'Cargo', pf: 20, details: [ {func:'ALI: Cargo', type:'ALI', complexity:'Baixa', pf:7}, {func:'IncluirCargo', type:'EE', complexity:'Baixa', pf:3}, {func:'AtualizarCargo', type:'EE', complexity:'Baixa', pf:3}, {func:'BuscarCargos', type:'SE', complexity:'Baixa', pf:4}, {func:'DeletarCargo', type:'EE', complexity:'Baixa', pf:3} ]},
+                        { name: 'Departamento', pf: 20, details: [ {func:'ALI: Departamento', type:'ALI', complexity:'Baixa', pf:7}, {func:'IncluirDepartamento', type:'EE', complexity:'Baixa', pf:3}, {func:'AtualizarDepartamento', type:'EE', complexity:'Baixa', pf:3}, {func:'BuscarDepartamentos', type:'SE', complexity:'Baixa', pf:4}, {func:'DeletarDepartamento', type:'EE', complexity:'Baixa', pf:3} ]},
+                        { name: 'Setor', pf: 20, details: [ {func:'ALI: Setor', type:'ALI', complexity:'Baixa', pf:7}, {func:'IncluirSetorTrabalho', type:'EE', complexity:'Baixa', pf:3}, {func:'AtualizarSetor', type:'EE', complexity:'Baixa', pf:3}, {func:'BuscarSetor', type:'SE', complexity:'Baixa', pf:4}, {func:'DeletarSetor', type:'EE', complexity:'Baixa', pf:3} ]},
+                        { name: 'Mensageria', pf: 6, details: [ {func:'EnviarMensagem', type:'EE', complexity:'Baixa', pf:3}, {func:'ReceberMensagem', type:'CE', complexity:'Baixa', pf:3} ]}
+                    ]
+                },
+                frontendDesktop: {
+                    dataPf: 136, transPf: 233,
+                    modules: [
+                        { name: 'Cadastros Simples', pf: 70, details: [ {func:'Módulo Cargo', type:'Total', complexity:'Baixa', pf:15}, {func:'Módulo Departamento', type:'Total', complexity:'Baixa', pf:15}, {func:'Módulo Setor', type:'Total', complexity:'Baixa', pf:15}, {func:'Módulo Tipo de Escala', type:'Total', complexity:'Baixa', pf:15}, {func:'Módulo Posto de Trabalho', type:'Total', complexity:'Baixa', pf:10} ]},
+                        { name: 'Escala Extra', pf: 59, details: [ {func:'AIE: Definição Escala Extra', type:'AIE', complexity:'Média', pf:5}, {func:'AIE: Cargos (lookup)', type:'AIE', complexity:'Baixa', pf:5}, {func:'AIE: Setores (lookup)', type:'AIE', complexity:'Baixa', pf:5}, {func:'AIE: Tipos Serviço (lookup)', type:'AIE', complexity:'Baixa', pf:5}, {func:'AIE: Inscrições', type:'AIE', complexity:'Baixa', pf:5}, {func:'AIE: Status Inscrição', type:'AIE', complexity:'Baixa', pf:5}, {func:'Listar Definições', type:'SE', complexity:'Média', pf:5}, {func:'Incluir/Atualizar Definição', type:'EE', complexity:'Média', pf:4}, {func:'Excluir Definição', type:'EE', complexity:'Baixa', pf:3}, {func:'Listar Inscrições', type:'SE', complexity:'Média', pf:5}, {func:'Atualizar Status', type:'EE', complexity:'Baixa', pf:4}, {func:'Excluir Inscrição', type:'EE', complexity:'Baixa', pf:3}, {func:'Gerar Relatório', type:'SE', complexity:'Média', pf:5} ]},
+                        { name: 'Perfis e Permissões', pf: 53, details: [ {func:'AIE: Funcionalidades', type:'AIE', complexity:'Baixa', pf:5}, {func:'AIE: Perfis', type:'AIE', complexity:'Baixa', pf:5}, {func:'AIE: Relação Perfil-Func.', type:'AIE', complexity:'Baixa', pf:5}, {func:'AIE: Relação Cargo-Perfil', type:'AIE', complexity:'Baixa', pf:5}, {func:'AIE: Cargos (lookup)', type:'AIE', complexity:'Baixa', pf:5}, {func:'CRUD Funcionalidades', type:'Trans.', complexity:'Baixa', pf:10}, {func:'CRUD Perfis', type:'Trans.', complexity:'Baixa', pf:10}, {func:'Gerenciar Permissões', type:'EE', complexity:'Média', pf:4}, {func:'Gerenciar Perfis Cargo', type:'EE', complexity:'Média', pf:4} ]},
+                        { name: 'Escala', pf: 51, details: [ {func:'AIEs (6 total)', type:'AIE', complexity:'Mista', pf:30}, {func:'Listar/Consultar Escalas', type:'SE', complexity:'Média', pf:5}, {func:'Incluir/Atualizar Definição', type:'EE', complexity:'Média', pf:4}, {func:'Montar Escala', type:'EE', complexity:'Baixa', pf:3}, {func:'Gerar Escala Mês Seguinte', type:'EE', complexity:'Baixa', pf:3}, {func:'Excluir Escala', type:'EE', complexity:'Baixa', pf:3}, {func:'Visualizar Escala Gerada', type:'CE', complexity:'Baixa', pf:3} ]},
+                        { name: 'Home & Menu', pf: 45, details: [ {func:'Navegação (14 links)', type:'CE', complexity:'Baixa', pf:42}, {func:'Efetuar Logout', type:'EE', complexity:'Baixa', pf:3} ]},
+                        { name: 'Permutas', pf: 42, details: [ {func:'AIEs (4 total)', type:'AIE', complexity:'Mista', pf:22}, {func:'Listar Solicitações', type:'SE', complexity:'Média', pf:5}, {func:'Criar/Propor Permuta', type:'EE', complexity:'Média', pf:4}, {func:'Aceitar/Recusar', type:'EE', complexity:'Baixa', pf:3}, {func:'Cancelar Permuta', type:'EE', complexity:'Baixa', pf:3}, {func:'Trocar Mensagens', type:'EE/SE', complexity:'Média', pf:5} ]},
+                        { name: 'Login', pf: 36, details: [ {func:'AIEs (4 total)', type:'AIE', complexity:'Baixa', pf:20}, {func:'Autenticar Usuário', type:'EE', complexity:'Baixa', pf:3}, {func:'Solicitar Redefinição', type:'EE', complexity:'Baixa', pf:3}, {func:'Efetuar Redefinição', type:'EE', complexity:'Baixa', pf:3}, {func:'Criar Primeiro Acesso', type:'EE', complexity:'Baixa', pf:3}, {func:'Exibir Dados/Msgs', type:'SE', complexity:'Baixa', pf:4} ]},
+                        { name: 'Funcionário', pf: 29, details: [ {func:'AIEs (3 total)', type:'AIE', complexity:'Mista', pf:17}, {func:'Listar/Consultar', type:'SE', complexity:'Média', pf:5}, {func:'Incluir/Atualizar', type:'EE', complexity:'Média', pf:4}, {func:'Excluir', type:'EE', complexity:'Baixa', pf:3} ]},
+                        { name: 'Exibição de Escalas', pf: 24, details: [ {func:'AIEs (2 total)', type:'AIE', complexity:'Mista', pf:12}, {func:'Visualizar Escala', type:'SE', complexity:'Alta', pf:7}, {func:'Gerar Relatório', type:'SE', complexity:'Média', pf:5} ]}
+                    ]
+                },
+                frontendMobile: {
+                    dataPf: 100, transPf: 134,
+                    modules: [
+                        { name: 'Escala Extra', pf: 36, details: [ {func:'AIEs (related)', type:'AIE', complexity:'Baixa', pf:15}, {func:'Carregar Solicitações', type:'CE', complexity:'Baixa', pf:3}, {func:'Carregar Extras Disp.', type:'CE', complexity:'Baixa', pf:3}, {func:'Exibir Extras (Cards)', type:'SE', complexity:'Baixa', pf:4}, {func:'Exibir Solicitações (Tabela)', type:'SE', complexity:'Baixa', pf:4}, {func:'Cancelar Inscrição', type:'EE', complexity:'Baixa', pf:3}, {func:'Cadastrar Solicitação', type:'EE', complexity:'Baixa', pf:4} ]},
+                        { name: 'Permutas', pf: 28, details: [ {func:'AIEs (related)', type:'AIE', complexity:'Baixa', pf:10}, {func:'Carregar Contagem', type:'CE', complexity:'Baixa', pf:3}, {func:'Carregar Escalas', type:'CE', complexity:'Baixa', pf:3}, {func:'Enviar Solicitação', type:'EE', complexity:'Baixa', pf:3}, {func:'Buscar/Exibir Permutas', type:'CE/SE', complexity:'Baixa', pf:6}, {func:'Navegar p/ Solicitações', type:'EE', complexity:'Baixa', pf:3} ]},
+                        { name: 'Home', pf: 19, details: [ {func:'AIEs (related)', type:'AIE', complexity:'Baixa', pf:5}, {func:'Exibir Boas-vindas', type:'SE', complexity:'Baixa', pf:4}, {func:'Carregar Contagem Permutas', type:'CE', complexity:'Baixa', pf:3}, {func:'Navegação (3 botões)', type:'EE', complexity:'Baixa', pf:9}, {func:'Logout', type:'EE', complexity:'Baixa', pf:3} ]},
+                        { name: 'Solicitações Permutas', pf: 19, details: [ {func:'AIEs (related)', type:'AIE', complexity:'Baixa', pf:5}, {func:'Buscar/Exibir Solicitações', type:'CE/SE', complexity:'Baixa', pf:7}, {func:'Aprovar Permuta', type:'EE', complexity:'Baixa', pf:3}, {func:'Recusar Permuta', type:'EE', complexity:'Baixa', pf:3} ]},
+                        { name: 'Login', pf: 16, details: [ {func:'AIEs (4 total)', type:'AIE', complexity:'Baixa', pf:20}, {func:'Autenticar Usuário', type:'EE', complexity:'Baixa', pf:3}, {func:'Solicitar/Efetuar Redefinição', type:'EE', complexity:'Baixa', pf:6}, {func:'Exibir Msgs', type:'SE', complexity:'Baixa', pf:4} ]},
+                        { name: 'Escalas', pf: 16, details: [ {func:'AIEs (related)', type:'AIE', complexity:'Baixa', pf:5}, {func:'Carregar Escalas', type:'CE', complexity:'Baixa', pf:3}, {func:'Carregar Lookups', type:'CE', complexity:'Baixa', pf:6}, {func:'Filtrar/Exibir Escala', type:'CE/SE', complexity:'Baixa', pf:7} ]}
+                    ]
+                }
+            };
+            
+            // --- FUNÇÕES DE CÁLCULO E RENDERIZAÇÃO ---
+            function calculateVaf(scores) {
+                const tdi = scores.reduce((sum, item) => sum + item.score, 0);
+                return 0.65 + (0.01 * tdi);
+            }
+
+            function populateVafTable(tableId, scores) {
+                const tableBody = document.getElementById(tableId);
+                tableBody.innerHTML = '';
+                scores.forEach((item, index) => {
+                    const row = `<tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${index + 1}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.name}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">${item.score}</td>
+                    </tr>`;
+                    tableBody.innerHTML += row;
+                });
+            }
+            
+            // --- CÁLCULOS PRINCIPAIS ---
+            const backendUfp = projectData.backend.dataPf + projectData.backend.transPf;
+            const backendVaf = calculateVaf(gscData.backend);
+            const backendAfp = Math.round(backendUfp * backendVaf);
+
+            const desktopUfp = projectData.frontendDesktop.dataPf + projectData.frontendDesktop.transPf;
+            const desktopVaf = calculateVaf(gscData.desktop);
+            const desktopAfp = Math.round(desktopUfp * desktopVaf);
+
+            const mobileUfp = projectData.frontendMobile.dataPf + projectData.frontendMobile.transPf;
+            const mobileVaf = calculateVaf(gscData.mobile);
+            const mobileAfp = Math.round(mobileUfp * mobileVaf);
+
+            const totalAfpGeral = backendAfp + desktopAfp + mobileAfp;
+
+            // --- ATUALIZAÇÃO DA UI ---
+            document.getElementById('total-afp-geral').textContent = totalAfpGeral;
+            document.getElementById('total-afp-backend').innerHTML = `${backendAfp} <span class="text-lg font-normal">AFP</span>`;
+            document.getElementById('total-afp-desktop').innerHTML = `${desktopAfp} <span class="text-lg font-normal">AFP</span>`;
+            document.getElementById('total-afp-mobile').innerHTML = `${mobileAfp} <span class="text-lg font-normal">AFP</span>`;
+            
+            document.getElementById('backend-data-pf').textContent = projectData.backend.dataPf;
+            document.getElementById('backend-trans-pf').textContent = projectData.backend.transPf;
+            document.getElementById('backend-total-ufp').textContent = backendUfp;
+            document.getElementById('backend-vaf').textContent = backendVaf.toFixed(2);
+            document.getElementById('backend-total-afp').textContent = backendAfp;
+            populateVafTable('backend-vaf-table', gscData.backend);
+
+            document.getElementById('desktop-data-pf').textContent = projectData.frontendDesktop.dataPf;
+            document.getElementById('desktop-trans-pf').textContent = projectData.frontendDesktop.transPf;
+            document.getElementById('desktop-total-ufp').textContent = desktopUfp;
+            document.getElementById('desktop-vaf').textContent = desktopVaf.toFixed(2);
+            document.getElementById('desktop-total-afp').textContent = desktopAfp;
+            populateVafTable('desktop-vaf-table', gscData.desktop);
+
+            document.getElementById('mobile-data-pf').textContent = projectData.frontendMobile.dataPf;
+            document.getElementById('mobile-trans-pf').textContent = projectData.frontendMobile.transPf;
+            document.getElementById('mobile-total-ufp').textContent = mobileUfp;
+            document.getElementById('mobile-vaf').textContent = mobileVaf.toFixed(2);
+            document.getElementById('mobile-total-afp').textContent = mobileAfp;
+            populateVafTable('mobile-vaf-table', gscData.mobile);
+
+            // --- GRÁFICOS ---
+            const chartColors = { blue: 'rgba(59, 130, 246, 0.8)', green: 'rgba(34, 197, 94, 0.8)', yellow: 'rgba(234, 179, 8, 0.8)' };
+            const chartHoverColors = { blue: 'rgba(59, 130, 246, 1)', green: 'rgba(34, 197, 94, 1)', yellow: 'rgba(234, 179, 8, 1)' };
+
+            const mainChartCtx = document.getElementById('mainChart').getContext('2d');
+            const mainChart = new Chart(mainChartCtx, {
+                type: 'pie',
+                data: {
+                    labels: [`Backend (${backendUfp} UFP)`, `Frontend Desktop (${desktopUfp} UFP)`, `Frontend Mobile (${mobileUfp} UFP)`],
+                    datasets: [{
+                        data: [backendUfp, desktopUfp, mobileUfp],
+                        backgroundColor: [chartColors.blue, chartColors.green, chartColors.yellow],
+                        hoverBackgroundColor: [chartHoverColors.blue, chartHoverColors.green, chartHoverColors.yellow],
+                        borderColor: '#f3f4f6', borderWidth: 4, hoverOffset: 15,
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 14 } } } } }
+            });
+            
+            mainChartCtx.canvas.onclick = (evt) => {
+                const activePoints = mainChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+                if (activePoints.length) {
+                    const viewMap = ['backend', 'frontend-desktop', 'frontend-mobile'];
+                    showView(viewMap[activePoints[0].index]);
+                }
+            };
+
+            function createBarChart(chartId, chartData, color) {
+                const ctx = document.getElementById(chartId).getContext('2d');
+                return new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels: chartData.modules.map(m => m.name), datasets: [{ label: 'UFP', data: chartData.modules.map(m => m.pf), backgroundColor: color }] },
+                    options: {
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false }, tooltip: { callbacks: { title: () => '' } } },
+                        scales: { y: { ticks: { autoSkip: false } } }
+                    }
+                });
+            }
+
+            const backendChart = createBarChart('backendChart', projectData.backend, chartColors.blue);
+            const desktopChart = createBarChart('desktopChart', projectData.frontendDesktop, chartColors.green);
+            const mobileChart = createBarChart('mobileChart', projectData.frontendMobile, chartColors.yellow);
+
+            // --- LÓGICA DO MODAL ---
+            const modal = document.getElementById('details-modal');
+            const modalPanel = document.getElementById('details-modal-panel');
+            const modalTitle = document.getElementById('modal-title');
+            const modalTableBody = document.getElementById('modal-table-body');
+            const modalCloseButton = document.getElementById('modal-close-button');
+
+            function showModal(title, details) {
+                modalTitle.textContent = `Detalhes: ${title}`;
+                modalTableBody.innerHTML = '';
+                if (details && details.length > 0) {
+                    details.forEach(d => {
+                        const row = `<tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${d.func}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${d.type}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${d.complexity}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">${d.pf}</td>
+                        </tr>`;
+                        modalTableBody.innerHTML += row;
+                    });
+                } else {
+                    modalTableBody.innerHTML = '<tr><td colspan="4" class="text-center py-10 text-gray-500">Nenhum detalhe disponível.</td></tr>';
+                }
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    modalPanel.classList.remove('scale-95', 'opacity-0');
+                }, 10);
+            }
+
+            function hideModal() {
+                modalPanel.classList.add('scale-95', 'opacity-0');
+                modal.classList.add('opacity-0');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            }
+            
+            function setupChartClick(chart, data) {
+                chart.canvas.onclick = (evt) => {
+                    const activePoints = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+                    if (activePoints.length) {
+                        const moduleData = data.modules[activePoints[0].index];
+                        showModal(moduleData.name, moduleData.details);
+                    }
+                };
+            }
+
+            setupChartClick(backendChart, projectData.backend);
+            setupChartClick(desktopChart, projectData.frontendDesktop);
+            setupChartClick(mobileChart, projectData.frontendMobile);
+
+            modalCloseButton.addEventListener('click', hideModal);
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) hideModal();
+            });
+
+            // --- LÓGICA DE NAVEGAÇÃO ---
+            const navLinks = document.querySelectorAll('.nav-link');
+            const views = document.querySelectorAll('.view');
+            const homeButton = document.getElementById('home-button');
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            function showView(viewId) {
+                views.forEach(v => v.classList.remove('active'));
+                document.getElementById(viewId + '-view').classList.add('active');
+                
+                // Atualiza links do desktop
+                document.querySelectorAll('#main-nav .nav-link').forEach(l => {
+                    l.classList.remove('active');
+                    if (l.dataset.view === viewId) l.classList.add('active');
+                });
+
+                // Atualiza links do mobile e fecha o menu
+                document.querySelectorAll('#mobile-menu .nav-link').forEach(l => {
+                     l.classList.remove('bg-gray-200');
+                    if (l.dataset.view === viewId) l.classList.add('bg-gray-200');
+                });
+                mobileMenu.classList.add('hidden');
+
+                window.location.hash = viewId;
+            }
+
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', e => { 
+                    e.preventDefault(); 
+                    showView(e.currentTarget.dataset.view); 
+                });
+            });
+            
+            homeButton.addEventListener('click', e => { 
+                e.preventDefault(); 
+                showView('dashboard'); 
+            });
+
+            const initialView = window.location.hash.replace('#', '') || 'dashboard';
+            showView(initialView);
+        });
+    </script>
+</body>
+</html>
